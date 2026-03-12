@@ -276,6 +276,23 @@ export class WhatsAppChannel implements Channel {
     }
   }
 
+  async sendImage(jid: string, imagePath: string, caption?: string): Promise<void> {
+    if (!fs.existsSync(imagePath)) {
+      logger.warn({ jid, imagePath }, 'Image file not found, skipping send');
+      return;
+    }
+    const image = fs.readFileSync(imagePath);
+    const msg = caption
+      ? { image, caption: `${ASSISTANT_NAME}: ${caption}` }
+      : { image };
+    try {
+      await this.sock.sendMessage(jid, msg);
+      logger.info({ jid, imagePath }, 'Image sent');
+    } catch (err) {
+      logger.warn({ jid, imagePath, err }, 'Failed to send image');
+    }
+  }
+
   isConnected(): boolean {
     return this.connected;
   }

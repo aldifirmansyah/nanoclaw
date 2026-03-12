@@ -3,6 +3,7 @@ import path from 'path';
 
 import {
   ASSISTANT_NAME,
+  TRIGGER_KEYWORD,
   CREDENTIAL_PROXY_PORT,
   IDLE_TIMEOUT,
   POLL_INTERVAL,
@@ -348,7 +349,7 @@ async function startMessageLoop(): Promise<void> {
   }
   messageLoopRunning = true;
 
-  logger.info(`NanoClaw running (trigger: @${ASSISTANT_NAME})`);
+  logger.info(`NanoClaw running (trigger: @${TRIGGER_KEYWORD}, name: ${ASSISTANT_NAME})`);
 
   while (true) {
     try {
@@ -562,6 +563,12 @@ async function main(): Promise<void> {
       const channel = findChannel(channels, jid);
       if (!channel) throw new Error(`No channel for JID: ${jid}`);
       return channel.sendMessage(jid, text);
+    },
+    sendImage: (jid, imagePath, caption) => {
+      const channel = findChannel(channels, jid);
+      if (!channel) throw new Error(`No channel for JID: ${jid}`);
+      if (!channel.sendImage) throw new Error(`Channel does not support images: ${channel.name}`);
+      return channel.sendImage(jid, imagePath, caption);
     },
     registeredGroups: () => registeredGroups,
     registerGroup,
