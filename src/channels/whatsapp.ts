@@ -44,6 +44,7 @@ export class WhatsAppChannel implements Channel {
   private outgoingQueue: Array<{ jid: string; text: string }> = [];
   private flushing = false;
   private groupSyncTimerStarted = false;
+  private reconnectDelay = 1000;
 
   private opts: WhatsAppChannelOpts;
 
@@ -110,21 +111,14 @@ export class WhatsAppChannel implements Channel {
         );
 
         if (shouldReconnect) {
-          logger.info('Reconnecting...');
-          this.connectInternal().catch((err) => {
-            logger.error({ err }, 'Failed to reconnect, retrying in 5s');
-            setTimeout(() => {
-              this.connectInternal().catch((err2) => {
-                logger.error({ err: err2 }, 'Reconnection retry failed');
-              });
-            }, 5000);
-          });
+          this.scheduleReconnect();
         } else {
           logger.info('Logged out. Run /setup to re-authenticate.');
           process.exit(0);
         }
       } else if (connection === 'open') {
         this.connected = true;
+        this.reconnectDelay = 1000; // reset backoff on successful connect
         logger.info('Connected to WhatsApp');
 
         // Announce availability so WhatsApp relays subsequent presence updates (typing indicators)
@@ -276,6 +270,27 @@ export class WhatsAppChannel implements Channel {
     }
   }
 
+  async sendImage(
+    jid: string,
+    imagePath: string,
+    caption?: string,
+  ): Promise<void> {
+    if (!fs.existsSync(imagePath)) {
+      logger.warn({ jid, imagePath }, 'Image file not found, skipping send');
+      return;
+    }
+    const image = fs.readFileSync(imagePath);
+    const msg = caption
+      ? { image, caption: `${ASSISTANT_NAME}: ${caption}` }
+      : { image };
+    try {
+      await this.sock.sendMessage(jid, msg);
+      logger.info({ jid, imagePath }, 'Image sent');
+    } catch (err) {
+      logger.warn({ jid, imagePath, err }, 'Failed to send image');
+    }
+  }
+
   isConnected(): boolean {
     return this.connected;
   }
@@ -337,6 +352,19 @@ export class WhatsAppChannel implements Channel {
     } catch (err) {
       logger.error({ err }, 'Failed to sync group metadata');
     }
+  }
+
+  private scheduleReconnect(): void {
+    const delay = this.reconnectDelay;
+    logger.info({ delayMs: delay }, 'Reconnecting...');
+    setTimeout(() => {
+      this.connectInternal().catch((err) => {
+        logger.error({ err }, 'Reconnect attempt failed');
+        this.reconnectDelay = Math.min(this.reconnectDelay * 2, 60000); // cap at 60s
+        this.scheduleReconnect();
+      });
+    }, delay);
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 60000);
   }
 
   private async translateJid(jid: string): Promise<string> {

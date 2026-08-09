@@ -19,6 +19,7 @@ const envConfig = readEnvFile([
   'NANOCLAW_EGRESS_LOCKDOWN',
   'NANOCLAW_EGRESS_NETWORK',
   'ONECLI_GATEWAY_CONTAINER',
+  'JSEARCH_API_KEY',
 ]);
 
 /**
@@ -38,6 +39,9 @@ export const DEFAULT_AGENT_PROVIDER = (
   envConfig.DEFAULT_AGENT_PROVIDER ||
   'claude'
 ).toLowerCase();
+
+export const JSEARCH_API_KEY =
+  process.env.JSEARCH_API_KEY || envConfig.JSEARCH_API_KEY || '';
 
 /**
  * @deprecated WhatsApp adapter copies now read the ASSISTANT_HAS_OWN_NUMBER

@@ -27,6 +27,8 @@ groups/*
 
 # Temp files
 .tmp-*
+*.log
+*.db
 
 # OS
 .DS_Store

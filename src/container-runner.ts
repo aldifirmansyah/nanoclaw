@@ -18,6 +18,7 @@ import {
   CONTAINER_MEMORY_LIMIT,
   CONTAINER_PIDS_LIMIT,
   DATA_DIR,
+  JSEARCH_API_KEY,
   GROUPS_DIR,
   ONECLI_API_KEY,
   ONECLI_URL,
@@ -498,6 +499,11 @@ async function buildContainerArgs(
     log.info('Egress lockdown active', { containerName, network: EGRESS_NETWORK });
   } else {
     args.push(...hostGatewayArgs());
+  }
+
+  // Inject JSearch API key if configured
+  if (JSEARCH_API_KEY) {
+    args.push('-e', `JSEARCH_API_KEY=${JSEARCH_API_KEY}`);
   }
 
   // User mapping
